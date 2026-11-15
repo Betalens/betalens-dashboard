@@ -14,19 +14,18 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from betalens.factor.config import section, write_yaml_config
+from betalens.factor.config import section, write_yaml_config, experiment_export_settings as export_settings
+from betalens.paths import runtime_directory
 
-from .factors import FACTOR_ROOT, REPO_ROOT, get_factor_config, load_factor_module
+from .factors import FACTOR_ROOT, get_factor_config, load_factor_module
 from .schemas import RunRequest, RunState, RunStatus
 
-if str(FACTOR_ROOT) not in sys.path:
-    sys.path.insert(0, str(FACTOR_ROOT))
-from factor_runtime import execute_factor, export_settings
+RUNTIME_ROOT = runtime_directory()
 
 
 MAX_RUNS = 20  # 内存里最多保留最近 N 次回测,超出按 LRU 淘汰
 TABLE_KINDS = ("trades", "positions")
-_CACHE_ROOT = REPO_ROOT / "outputs" / "cache" / "dashboard"
+_CACHE_ROOT = RUNTIME_ROOT / "cache" / "dashboard"
 
 
 def _normalize_group_list(value: Any) -> list[Any] | None:
@@ -206,7 +205,7 @@ class RunManager:
             run.append_log("[dashboard] resolving factor config\n")
             script, _spec_data, factor_cfg = get_factor_config(run.factor_class, run.name)
             run.factor_dir = str(script.parent)
-            output_dir = REPO_ROOT / "outputs" / "runs" / run.factor_class / run.name / run.run_id
+            output_dir = RUNTIME_ROOT / "runs" / run.factor_class / run.name / run.run_id
             output_dir.mkdir(parents=True, exist_ok=True)
             run.output_dir = str(output_dir)
             run_config = self._build_run_config(factor_cfg, run, output_dir)
@@ -234,9 +233,10 @@ class RunManager:
 
             log_writer = LogBuffer(run)
             with contextlib.redirect_stdout(log_writer), contextlib.redirect_stderr(log_writer):
-                result = execute_factor(run_config, script.with_suffix(".yaml"),
-                    getattr(mod, "build_spec", lambda *_: mod.spec), FactorPipeline,
-                    run_id=run.run_id, output_dir=output_dir)
+                entrypoint = getattr(mod, "run_from_config", None)
+                if entrypoint is None:
+                    raise ValueError("Factor must expose run_from_config(config_path, *, run_id, output_dir)")
+                result = entrypoint(run_config_path, run_id=run.run_id, output_dir=output_dir)
             run.experiment_export = result.experiment_export or {"status": "disabled"}
             run.append_log("[dashboard] pipeline returned, serializing result\n")
             run.result = result

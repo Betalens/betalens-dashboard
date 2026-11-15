@@ -1,6 +1,11 @@
 """Library migration contracts, using isolated outputs and synthetic markets."""
 from __future__ import annotations
 
+import os
+import pytest
+if not os.environ.get("BETALENS_FACTOR_ROOT"):
+    pytest.skip("requires explicit BETALENS_FACTOR_ROOT and research installation", allow_module_level=True)
+
 import copy
 import json
 from pathlib import Path
@@ -12,9 +17,9 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from .factors import FACTOR_ROOT, discover_factors, get_factor_config, load_factor_module
-from .runs import DashboardRun, RunManager
-from .schemas import RunRequest
+from dashboard.backend.factors import FACTOR_ROOT, discover_factors, get_factor_config, load_factor_module
+from dashboard.backend.runs import DashboardRun, RunManager
+from dashboard.backend.schemas import RunRequest
 
 sys.path.insert(0, str(FACTOR_ROOT))
 from factor_runtime import execution
@@ -135,15 +140,15 @@ def test_disabled_export_is_optional_and_custom_paths_survive(config, tmp_path, 
     assert tuple(result) == (result.backtest, result.analyst)
 
 
-def test_default_outputs_are_unique_and_repo_relative(config, tmp_path, monkeypatch):
-    monkeypatch.setattr(execution, "REPO_ROOT", tmp_path)
+def test_default_outputs_are_unique_and_runtime_relative(config, tmp_path, monkeypatch):
+    monkeypatch.setenv("BETALENS_RUNTIME_DIR", str(tmp_path))
     config["run"]["output_dir"] = "outputs/runs/manual"
     execution.execute_factor(config, tmp_path / "factor.yaml", lambda *_: None, FakePipeline, run_id="one")
     execution.execute_factor(config, tmp_path / "factor.yaml", lambda *_: None, FakePipeline, run_id="two")
-    assert (tmp_path / "outputs/runs/alpha101/ALPHA12/one/run_config.yaml").exists()
-    assert (tmp_path / "outputs/runs/alpha101/ALPHA12/two/run_config.yaml").exists()
+    assert (tmp_path / "runs/alpha101/ALPHA12/one/run_config.yaml").exists()
+    assert (tmp_path / "runs/alpha101/ALPHA12/two/run_config.yaml").exists()
     settings = execution.export_settings({})
-    assert settings["store_path"] == str(tmp_path / "outputs/experiments.lmdb")
+    assert settings["store_path"] == str(tmp_path / "experiments.lmdb")
 
 
 def test_export_roundtrip_idempotency_and_failure_preserve_result(config, tmp_path, monkeypatch):
@@ -184,14 +189,14 @@ def test_exported_result_can_be_viewed_over_http(config, tmp_path, monkeypatch):
 
 
 def test_dashboard_exports_before_releasing_result(config, tmp_path, monkeypatch):
-    from . import runs
+    from dashboard.backend import runs
     from betalens.analyst.presentation import archived_names
     config["experiment_export"]["enabled"] = True
-    monkeypatch.setattr(runs, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(runs, "RUNTIME_ROOT", tmp_path)
     monkeypatch.setattr(runs, "_CACHE_ROOT", tmp_path / "outputs/cache/dashboard")
     script = FACTOR_ROOT / "alpha101/ALPHA12/factor_ALPHA12.py"
     monkeypatch.setattr(runs, "get_factor_config", lambda *a: (script, {}, config))
-    monkeypatch.setattr(runs, "load_factor_module", lambda *a: SimpleNamespace(build_spec=lambda *a: None, FactorPipeline=FakePipeline))
+    monkeypatch.setattr(runs, "load_factor_module", lambda *a: SimpleNamespace(FactorPipeline=FakePipeline, run_from_config=lambda path, **kwargs: execution.execute_factor(load_yaml_config(path), path, lambda *_: None, FakePipeline, **kwargs)))
     manager = RunManager()
     monkeypatch.setattr(manager, "_dump_excel", lambda *a: None)
     run = DashboardRun(RunRequest(factor_class="alpha101", name="ALPHA12",
@@ -202,7 +207,7 @@ def test_dashboard_exports_before_releasing_result(config, tmp_path, monkeypatch
         assert run.status == "completed", run.error
         assert run.backtest is None and run.result is None
         assert run.payload["run"]["experiment_export"]["status"] == "saved"
-        assert Path(run.output_dir) == tmp_path / "outputs/runs/alpha101/ALPHA12" / run.run_id
+        assert Path(run.output_dir) == tmp_path / "runs/alpha101/ALPHA12" / run.run_id
         assert run.table_path("positions").exists()
         run.cleanup()
         assert (Path(run.output_dir) / "experiment_export.json").exists()
@@ -307,7 +312,7 @@ def test_illiq_does_not_fill_missing_close():
 
 
 def test_discovery_uses_self_contained_multiple_yaml_fixture(tmp_path, monkeypatch, config):
-    from . import factors
+    from dashboard.backend import factors
     category = tmp_path / "demo"
     directory = category / "SAMPLE"
     directory.mkdir(parents=True)

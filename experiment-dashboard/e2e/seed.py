@@ -15,8 +15,8 @@ def main():
     path = root / "outputs/experiments-e2e"
     if args.reset and path.exists():
         shutil.rmtree(path)
-    fixtures = runpy.run_path(str(root / "tests/test_experiments.py"))
-    backtest = fixtures["bt"].__wrapped__()
+    fixtures = runpy.run_path(str(root / "tests/fixtures/experiments.py"))
+    backtest = fixtures["bt"]()
     import pandas as pd
     from betalens.analyst import Analyst
     days = backtest.daily_weight.index

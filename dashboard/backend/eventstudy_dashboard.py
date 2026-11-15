@@ -14,11 +14,12 @@ from betalens.datafeed import Datafeed
 from betalens.eventstudy.eventstudy import EventStudy
 from betalens.factor.config import load_yaml_config, section
 
-from .factors import FACTOR_ROOT, REPO_ROOT
+from .factors import FACTOR_ROOT
+from betalens.paths import runtime_directory
 
 
 EVENT_ROOT = FACTOR_ROOT / "tools" / "eventstudy"
-EVENT_OUTPUT_ROOT = Path(tempfile.gettempdir()) / "betalens_dashboard_eventstudy"
+EVENT_OUTPUT_ROOT = runtime_directory() / "eventstudy"
 EVENT_PARAMS_FILE = EVENT_ROOT / "eventstudy.yaml"
 MAX_COMPARISON_EVENTS = 30
 
@@ -111,7 +112,7 @@ def discover_event_files() -> dict[str, Any]:
                 {
                     "id": path.name,
                     "name": path.stem,
-                    "path": str(path.relative_to(REPO_ROOT)),
+                    "path": str(path.relative_to(FACTOR_ROOT)),
                     "eventCount": int(len(events)),
                     "dateFrom": events["date"].min().strftime("%Y-%m-%d") if len(events) else "",
                     "dateTo": events["date"].max().strftime("%Y-%m-%d") if len(events) else "",
@@ -134,7 +135,7 @@ def discover_event_files() -> dict[str, Any]:
                 {
                     "id": path.name,
                     "name": path.stem,
-                    "path": str(path.relative_to(REPO_ROOT)),
+                    "path": str(path.relative_to(FACTOR_ROOT)),
                     "eventCount": 0,
                     "dateFrom": "",
                     "dateTo": "",
@@ -431,7 +432,7 @@ def run_event_study(params: dict[str, Any]) -> dict[str, Any]:
         "eventFile": {
             "id": path.name,
             "name": path.stem,
-            "path": str(path.relative_to(REPO_ROOT)),
+            "path": str(path.relative_to(FACTOR_ROOT)),
         },
         "assets": assets,
         "parameters": {

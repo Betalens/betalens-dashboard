@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 5180",
     "build": "tsc --noEmit && vite build",
-    "pretest:e2e": "../.venv/bin/python e2e/seed.py --reset",
+    "pretest:e2e": "python e2e/seed.py --reset",
     "test:e2e": "playwright test"
   },
   "dependencies": {

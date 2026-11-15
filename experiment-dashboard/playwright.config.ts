@@ -6,7 +6,7 @@ export default defineConfig({
   workers: 1,
   use: { baseURL: 'http://127.0.0.1:8021', browserName: 'chromium', screenshot: 'only-on-failure' },
   webServer: {
-    command: '../.venv/bin/python -m betalens.experiments serve --db ../outputs/experiments-e2e --port 8021',
+    command: 'python e2e/serve.py',
     url: 'http://127.0.0.1:8021/api/health',
     reuseExistingServer: false,
     timeout: 30000,

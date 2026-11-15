@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "betalens-dashboard"
+version = "2.0.0"
+description = "Betalens online research workbench and offline experiment viewer sources"
+requires-python = ">=3.10"
+dependencies = ["betalens[dashboard,experiments,viz]>=1.2,<2"]
+
+[project.optional-dependencies]
+test = ["build>=1.0", "pytest>=8,<9", "httpx>=0.27"]
+
+[project.scripts]
+betalens-dashboard = "dashboard.backend.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["dashboard", "dashboard.backend", "dashboard.backend.*"]
+
+[tool.pytest.ini_options]
+testpaths = ["dashboard/backend", "tests"]
+
+[tool.uv.sources]
+betalens = { git = "https://github.com/Janiszzz/betalens.git", rev = "dc041aee8f88e1a6beeb41c6a9d8d8b01cce8f84" }

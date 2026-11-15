@@ -3,11 +3,13 @@ from __future__ import annotations
 import importlib.util
 import ast
 import sys
+import os
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
 from betalens.factor.config import (
+    ConfigError,
     load_yaml_config,
     resolve_preprocessing_options,
     section,
@@ -16,8 +18,9 @@ from betalens.factor.config import (
 from .schemas import FactorDetail, FactorSummary
 
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-FACTOR_ROOT = REPO_ROOT / "betalens-factor"
+from betalens.paths import runtime_directory
+
+FACTOR_ROOT = Path(os.environ["BETALENS_FACTOR_ROOT"]).expanduser().resolve() if os.environ.get("BETALENS_FACTOR_ROOT") else runtime_directory() / "unconfigured-factors"
 _FACTOR_REQUIRED_SECTIONS = ("meta", "factor_spec", "weight", "run")
 _STRATEGY_TYPES = {"cross_sectional", "timing"}
 
@@ -73,8 +76,8 @@ def _iter_factor_specs(class_dir: Path) -> list[dict[str, Any]]:
 
 
 def _iter_specs() -> list[tuple[str, Path, dict[str, Any]]]:
-    if not FACTOR_ROOT.exists():
-        return []
+    if not FACTOR_ROOT.is_dir():
+        raise ConfigError("Set BETALENS_FACTOR_ROOT to an existing research checkout directory")
     specs: list[tuple[str, Path, dict[str, Any]]] = []
     for class_dir in sorted(FACTOR_ROOT.iterdir()):
         if not class_dir.is_dir() or class_dir.name.startswith((".", "__")):
@@ -197,7 +200,7 @@ def get_factor_detail(factor_class: str, name: str) -> FactorDetail:
 def load_factor_module(script: Path):
     class_dir = script.parent.parent
     factor_root = class_dir.parent
-    for path in (REPO_ROOT, factor_root, class_dir, script.parent):
+    for path in (factor_root, class_dir, script.parent):
         path_str = str(path)
         if path_str not in sys.path:
             sys.path.insert(0, path_str)

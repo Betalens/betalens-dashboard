@@ -1,14 +1,19 @@
 from __future__ import annotations
 
+import os
+import pytest
+if not os.environ.get("BETALENS_FACTOR_ROOT"):
+    pytest.skip("requires explicit BETALENS_FACTOR_ROOT and research installation", allow_module_level=True)
+
 import tempfile
 import unittest
 from pathlib import Path
 
 from betalens.factor.config import write_yaml_config
 
-from .factors import clear_factor_cache, discover_factors, get_factor_config
-from .runs import DashboardRun, RunManager
-from .schemas import RunRequest
+from dashboard.backend.factors import clear_factor_cache, discover_factors, get_factor_config
+from dashboard.backend.runs import DashboardRun, RunManager
+from dashboard.backend.schemas import RunRequest
 
 
 class FactorYamlDashboardTests(unittest.TestCase):

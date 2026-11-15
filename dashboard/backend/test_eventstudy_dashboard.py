@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import unittest
+import tempfile
+from pathlib import Path
 from unittest.mock import patch
 
 import numpy as np
@@ -36,18 +38,21 @@ class EventStudyDashboardTests(unittest.TestCase):
             self.assertEqual(_asset_payload("A"), [{"code": "A", "name": None, "label": "A"}])
 
     def test_discover_event_files_reads_local_xlsx(self) -> None:
-        configured_defaults = eventstudy_dashboard.load_eventstudy_params()
-        payload = discover_event_files()
-        files = payload["files"]
-
-        self.assertIn("defaults", payload)
-        self.assertEqual(payload["defaults"]["event_file"], configured_defaults["event_file"])
-        self.assertEqual(payload["defaults"]["code"], configured_defaults["code"])
-        self.assertGreaterEqual(len(files), 1)
-        self.assertTrue(any(item["id"] == "1.春节假期.xlsx" for item in files))
-        first = next(item for item in files if item["id"] == "1.春节假期.xlsx")
-        self.assertIn("date", first["columns"])
-        self.assertGreater(first["eventCount"], 0)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            events = root / "tools/eventstudy"
+            events.mkdir(parents=True)
+            pd.DataFrame({"date": ["2025-01-02"], "event": [1]}).to_excel(events / "sample.xlsx", index=False)
+            params = events / "eventstudy.yaml"
+            params.write_text("eventstudy: {event_file: sample.xlsx, code: '000001.SH'}\n")
+            with patch.multiple(eventstudy_dashboard, FACTOR_ROOT=root, EVENT_ROOT=events, EVENT_PARAMS_FILE=params):
+                payload = discover_event_files()
+            self.assertEqual(payload["defaults"]["event_file"], "sample.xlsx")
+            first = payload["files"][0]
+            self.assertEqual(first["id"], "sample.xlsx")
+            self.assertEqual(first["path"], "tools/eventstudy/sample.xlsx")
+            self.assertIn("date", first["columns"])
+            self.assertEqual(first["eventCount"], 1)
 
     def test_fixed_holding_returns_use_holding_start_offset(self) -> None:
         returns = pd.DataFrame(
