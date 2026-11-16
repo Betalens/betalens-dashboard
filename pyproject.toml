@@ -22,4 +22,4 @@ include = ["dashboard", "dashboard.backend", "dashboard.backend.*"]
 testpaths = ["dashboard/backend", "tests"]
 
 [tool.uv.sources]
-betalens = { git = "https://github.com/Janiszzz/betalens.git", rev = "dc041aee8f88e1a6beeb41c6a9d8d8b01cce8f84" }
+betalens = { git = "https://github.com/Janiszzz/betalens.git", rev = "534aedb2214a01e8c1e29ca317ec7c7cd8e950ea" }
