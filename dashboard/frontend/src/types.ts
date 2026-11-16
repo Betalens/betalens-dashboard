@@ -64,6 +64,10 @@ export type TimingPayload = {
 };
 
 export type RunResult = {
+  executionPolicy?: {suspension?: string; unknown?: string; delist_policy?: string; delist_untradable?: string; uses_hindsight?: boolean};
+  executionBlocks?: Array<Record<string, unknown>>;
+  delistEvents?: Array<Record<string, unknown>>;
+  valuationAdjustments?: Array<Record<string, unknown>>;
   run: RunState;
   factor: {
     class: string;

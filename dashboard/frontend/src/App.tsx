@@ -796,6 +796,7 @@ export function BacktestResultView({ result, state, runId, tab = 'overview', isT
   isTiming?: boolean; logs?: string; client?: BacktestResultClient;
 }) {
   return <ResultClientContext.Provider value={client}>
+    {result?.executionPolicy && <div className="comparison-warning">{result.executionPolicy.suspension === 'disabled' ? '本次回测已关闭交易状态检查。' : '停牌日禁止买卖；缺少完整停牌覆盖时中止回测。'}{result.executionPolicy.uses_hindsight && '退市清仓使用事后退市信息：在退市前最后可交易日收盘清仓，未变现残余持仓在退市日减值为零。'}</div>}
     {tab === 'overview' && (isTiming ? <TimingOverview result={result} state={state} /> : <Overview result={result} state={state} />)}
     {tab === 'trades' && <Trades runId={runId} result={result} />}
     {tab === 'positions' && <Positions runId={runId} result={result} />}
