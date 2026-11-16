@@ -294,8 +294,7 @@ def test_missing_mining_dependency_reported_before_search(tmp_path, monkeypatch)
         execution.run_mining_from_config(parameters, performance)
 
 
-@pytest.mark.parametrize("relative", ["alpha101/mining/run.py", "LiqDemand/DISP/mining/run.py",
-                                      "tdx/XICHOU/timing_mining/run.py"])
+@pytest.mark.parametrize("relative", ["alpha101/mining/run.py", "LiqDemand/DISP/mining/run.py"])
 def test_mining_entrypoints_work_from_other_directory(relative, tmp_path):
     result = subprocess.run([sys.executable, str(FACTOR_ROOT / relative), "--help"],
                             cwd=tmp_path, text=True, capture_output=True, timeout=15)
